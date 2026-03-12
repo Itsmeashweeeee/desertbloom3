@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Desert Bloom</title>
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+  <!-- NOTIFICATION SETUP MODAL (first visit only) -->
+  <div id="notif-modal" class="modal-overlay hidden">
+    <div class="modal-box">
+      <div class="modal-icon">🌵</div>
+      <h2>Daily reminders?</h2>
+      <p>Get a nudge when it's time to check in. You can change this anytime in Settings.</p>
+      <div class="modal-time-row">
+        <label for="modal-notif-time">Remind me at</label>
+        <input type="time" id="modal-notif-time" value="08:00" />
+      </div>
+      <button class="btn-primary btn-full" id="notif-allow-btn">Turn on reminders</button>
+      <button class="btn-ghost btn-full" id="notif-skip-btn">Skip for now</button>
+    </div>
+  </div>
+
+  <!-- BLOOD SUGAR READING MODAL -->
+  <div id="bs-modal" class="modal-overlay hidden">
+    <div class="modal-box">
+      <div class="modal-icon">🩸</div>
+      <h2>Log your reading</h2>
+      <p>Enter your blood sugar level in mg/dL.</p>
+      <input type="hidden" id="bs-task-id" />
+      <div class="bs-input-wrap">
+        <input type="number" id="bs-value-input" min="20" max="600" step="1" placeholder="e.g. 120" />
+        <span class="bs-unit">mg/dL</span>
+      </div>
+      <div class="bs-range-hint">Target range: 70–180 mg/dL</div>
+      <div class="modal-actions">
+        <button class="btn-primary" id="bs-confirm-btn">Log & complete</button>
+        <button class="btn-ghost" id="bs-skip-btn">Complete without logging</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- EDIT TASK DRAWER -->
+  <div id="edit-overlay" class="modal-overlay hidden">
+    <div class="modal-box">
+      <h2>Edit Task</h2>
+      <input type="hidden" id="edit-task-id" />
+      <label class="field-label" for="edit-task-name">Task name</label>
+      <input type="text" id="edit-task-name" maxlength="80" placeholder="Task name…" />
+      <label class="field-label" for="edit-task-time">Time (optional)</label>
+      <input type="time" id="edit-task-time" />
+      <label class="field-label" for="edit-task-repeat">Repeat</label>
+      <select id="edit-task-repeat">
+        <option value="daily">Daily</option>
+        <option value="weekly">Weekly</option>
+        <option value="once">One-time</option>
+      </select>
+      <label class="bs-check-label">
+        <input type="checkbox" id="edit-bs-toggle" />
+        <span>Track as blood sugar check 🩸</span>
+      </label>
+      <div class="modal-actions">
+        <button class="btn-primary" id="edit-save-btn">Save</button>
+        <button class="btn-ghost" id="edit-cancel-btn">Cancel</button>
+        <button class="btn-danger" id="edit-delete-btn">Delete task</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HEADER -->
+  <header class="app-header">
+    <div class="header-inner">
+      <h1 class="app-title">🌵 Desert Bloom</h1>
+      <div class="streak-badge">
+        <span id="streak-count">0</span>
+        <span class="streak-label">day streak</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- TABS -->
+  <nav class="tab-bar">
+    <button class="tab-btn active" data-tab="home">Home</button>
+    <button class="tab-btn" data-tab="tasks">Tasks</button>
+    <button class="tab-btn" data-tab="history">History</button>
+    <button class="tab-btn" data-tab="settings">Settings</button>
+  </nav>
+
+  <main class="app-main">
+
+    <!-- HOME -->
+    <section id="tab-home" class="tab-panel active">
+      <div class="home-greeting-block">
+        <p id="greeting-text" class="home-greeting-text">Good morning.</p>
+        <p class="home-subtext" id="home-subtext">Let's get started.</p>
+      </div>
+
+      <div class="desert-scene">
+        <canvas id="main-cactus" width="300" height="260"></canvas>
+      </div>
+      <div class="desert-stats-inline">
+        <div class="stat-row">
+          <span class="stat-label">Growth level</span>
+          <span class="stat-val" id="growth-level">0</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Total completed</span>
+          <span class="stat-val" id="total-completed">0</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label">Current streak</span>
+          <span class="stat-val" id="desert-streak">0 days</span>
+        </div>
+        <div class="progress-wrap">
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="growth-bar"></div>
+          </div>
+          <p class="progress-label" id="progress-label">0 / 10 to next level</p>
+        </div>
+      </div>
+
+      <div class="today-progress-wrap">
+        <div class="today-progress-bar-bg">
+          <div class="today-progress-bar-fill" id="today-progress-fill"></div>
+        </div>
+        <span class="today-progress-label" id="today-progress-label">0 of 0 done</span>
+      </div>
+      <ul id="home-task-list" class="checklist"></ul>
+      <div id="all-done-banner" class="all-done-banner hidden">
+        <span class="all-done-icon">🌸</span>
+        <p class="all-done-text">All done for today!</p>
+        <p class="all-done-sub">Your cactus is happy.</p>
+      </div>
+    </section>
+
+    <!-- TASKS -->
+    <section id="tab-tasks" class="tab-panel">
+      <div class="add-task-form">
+        <h2 class="section-title">Add a Task</h2>
+        <input type="text" id="task-name-input" placeholder="Task name…" maxlength="80" />
+        <div class="form-row">
+          <input type="time" id="task-time-input" />
+          <select id="task-repeat-input">
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="once">One-time</option>
+          </select>
+        </div>
+        <button class="btn-primary btn-full" id="add-task-btn">+ Add Task</button>
+      </div>
+      <h2 class="section-title">All Tasks <span class="section-hint">Tap a task to edit it</span></h2>
+      <ul id="all-task-list" class="task-list"></ul>
+    </section>
+
+    <!-- HISTORY -->
+    <section id="tab-history" class="tab-panel">
+
+      <!-- BLOOD SUGAR GRAPH CARD -->
+      <h2 class="section-title">Blood Sugar</h2>
+      <div class="bs-graph-card">
+        <div id="bs-summary" class="bs-summary"></div>
+        <div class="bs-period-toggle">
+          <button class="bs-period-btn" data-period="day">Day</button>
+          <button class="bs-period-btn active" data-period="week">Week</button>
+          <button class="bs-period-btn" data-period="month">Month</button>
+        </div>
+        <canvas id="bs-graph-canvas"></canvas>
+        <p id="bs-no-data" class="bs-no-data hidden">No readings yet for this period.<br>Complete a blood sugar check to start tracking.</p>
+        <div class="bs-legend">
+          <span class="bs-legend-item"><span class="bs-dot" style="background:#4E7A52"></span>In range (70–180)</span>
+          <span class="bs-legend-item"><span class="bs-dot" style="background:#e67e22"></span>Low (&lt;70)</span>
+          <span class="bs-legend-item"><span class="bs-dot" style="background:#c0392b"></span>High (&gt;180)</span>
+        </div>
+      </div>
+
+      <!-- COMPLETION HISTORY -->
+      <div class="section-header-row" style="margin-top:24px;">
+        <h2 class="section-title" style="margin:0;">Completion History</h2>
+        <button class="btn-ghost btn-sm" id="clear-history-btn">Clear all</button>
+      </div>
+      <p class="history-note">Most recent first. Tap an entry to remove it.</p>
+      <ul id="history-list" class="history-list"></ul>
+    </section>
+
+    <!-- SETTINGS -->
+    <section id="tab-settings" class="tab-panel">
+
+      <h2 class="section-title">Reminders</h2>
+      <div class="settings-card">
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Daily reminder</div>
+            <div class="settings-hint" id="notif-status-text">Not set up</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="notif-toggle" />
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="settings-row" id="notif-time-row" style="display:none;">
+          <label class="settings-label" for="notif-time-input">Reminder time</label>
+          <input type="time" id="notif-time-input" value="08:00" class="time-input-small" />
+        </div>
+        <button class="btn-secondary btn-full" id="test-notif-btn" style="display:none;">Send a test notification</button>
+      </div>
+
+      <h2 class="section-title">Data</h2>
+      <div class="settings-card">
+        <button class="btn-danger btn-full" id="reset-btn">Reset all data</button>
+        <p class="settings-hint" style="margin-top:8px;">Clears all tasks, history, blood sugar data, and your streak. Can't be undone.</p>
+      </div>
+
+    </section>
+
+  </main>
+
+  <div id="toast" class="toast hidden"></div>
+  <script src="app.js"></script>
+</body>
+</html>
