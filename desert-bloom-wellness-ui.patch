@@ -1,0 +1,342 @@
+diff --git a/index.html b/index.html
+index 1111111..2222222 100644
+--- a/index.html
++++ b/index.html
+@@ -121,6 +121,31 @@
+       <div class="today-progress-wrap">
+         <div class="today-progress-bar-bg">
+           <div class="today-progress-bar-fill" id="today-progress-fill"></div>
+         </div>
+         <span class="today-progress-label" id="today-progress-label">0 of 0 done</span>
+       </div>
++
++      <!-- WELLNESS TRACKER -->
++      <div class="wellness-card">
++        <h2 class="section-title">Wellness</h2>
++
++        <div class="wellness-row">
++          <div>
++            <div class="wellness-label">Water today</div>
++            <div class="wellness-hint">Track glasses of water</div>
++          </div>
++          <div class="water-controls">
++            <button id="water-minus-btn" class="water-btn" type="button" aria-label="Decrease water">−</button>
++            <span id="water-count" class="water-count">0</span>
++            <button id="water-plus-btn" class="water-btn" type="button" aria-label="Increase water">+</button>
++          </div>
++        </div>
++
++        <div class="wellness-row wellness-row-flow">
++          <div>
++            <div class="wellness-label">Cycle</div>
++            <div id="flow-today" class="wellness-hint">No flow</div>
++          </div>
++          <select id="flow-input" class="flow-select" aria-label="Cycle flow">
++            <option value="none">No flow</option>
++            <option value="light">Light</option>
++            <option value="medium">Medium</option>
++            <option value="heavy">Heavy</option>
++          </select>
++        </div>
++      </div>
+       <ul id="home-task-list" class="checklist"></ul>
+       <div id="all-done-banner" class="all-done-banner hidden">
+         <span class="all-done-icon">🌸</span>
+         <p class="all-done-text">All done for today!</p>
+         <p class="all-done-sub">Your cactus is happy.</p>
+       </div>
+diff --git a/style.css b/style.css
+index 3333333..4444444 100644
+--- a/style.css
++++ b/style.css
+@@ -999,3 +999,91 @@
++
++/* Wellness tracker */
++.wellness-card {
++  margin: 18px 0 14px;
++  padding: 16px;
++  border-radius: 20px;
++  background: rgba(255, 248, 239, 0.92);
++  border: 1px solid rgba(176, 128, 89, 0.14);
++  box-shadow: 0 10px 24px rgba(85, 62, 43, 0.08);
++}
++
++.wellness-row {
++  display: flex;
++  align-items: center;
++  justify-content: space-between;
++  gap: 12px;
++}
++
++.wellness-row + .wellness-row {
++  margin-top: 14px;
++  padding-top: 14px;
++  border-top: 1px solid rgba(176, 128, 89, 0.14);
++}
++
++.wellness-row-flow {
++  align-items: flex-start;
++}
++
++.wellness-label {
++  font-family: 'Lato', sans-serif;
++  font-size: 0.98rem;
++  font-weight: 700;
++  color: #5e4737;
++}
++
++.wellness-hint {
++  margin-top: 2px;
++  font-size: 0.84rem;
++  color: #8b6f5c;
++}
++
++.water-controls {
++  display: flex;
++  align-items: center;
++  gap: 10px;
++}
++
++.water-btn {
++  width: 38px;
++  height: 38px;
++  border: 0;
++  border-radius: 12px;
++  background: #e6efe5;
++  color: #44624a;
++  font-size: 1.25rem;
++  line-height: 1;
++  cursor: pointer;
++}
++
++.water-btn:active {
++  transform: scale(0.98);
++}
++
++.water-count {
++  min-width: 28px;
++  text-align: center;
++  font-size: 1.2rem;
++  font-weight: 700;
++  color: #5e4737;
++}
++
++.flow-select {
++  min-width: 120px;
++  padding: 10px 12px;
++  border-radius: 12px;
++  border: 1px solid rgba(176, 128, 89, 0.22);
++  background: #fff;
++  color: #5e4737;
++  font: inherit;
++}
++
++.cactus-glow {
++  filter: drop-shadow(0 0 18px rgba(255, 170, 120, 0.28));
++}
++
++@media (max-width: 480px) {
++  .wellness-row {
++    align-items: flex-start;
++    flex-direction: column;
++  }
++
++  .water-controls,
++  .flow-select {
++    width: 100%;
++  }
++
++  .water-controls {
++    justify-content: flex-end;
++  }
++}
+diff --git a/app.js b/app.js
+index 5555555..6666666 100644
+--- a/app.js
++++ b/app.js
+@@ -1,6 +1,8 @@
+ const TASKS_KEY    = 'desertbloom_tasks';
+ const HISTORY_KEY  = 'desertbloom_history';
+ const STREAK_KEY   = 'desertbloom_streak';
+ const LASTDAY_KEY  = 'desertbloom_lastday';
+ const GROWTH_KEY   = 'desertbloom_growth';
++const WATER_KEY    = 'desertbloom_water';
++const FLOW_KEY     = 'desertbloom_flow';
+@@ -33,6 +35,8 @@
+ let tasks   = [];
+ let history = [];
+ let streak  = 0;
+ let growth  = 0;
++let waterIntake = {};
++let flowLog = {};
+@@ -59,10 +63,14 @@
+ function save() {
+   localStorage.setItem(TASKS_KEY,   JSON.stringify(tasks));
+   localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+   localStorage.setItem(STREAK_KEY,  String(streak));
+   localStorage.setItem(GROWTH_KEY,  String(growth));
++  localStorage.setItem(WATER_KEY,   JSON.stringify(waterIntake));
++  localStorage.setItem(FLOW_KEY,    JSON.stringify(flowLog));
+ }
+ 
+ function load() {
+   const t = localStorage.getItem(TASKS_KEY);
+   const h = localStorage.getItem(HISTORY_KEY);
+   const s = localStorage.getItem(STREAK_KEY);
+   const g = localStorage.getItem(GROWTH_KEY);
++  const w = localStorage.getItem(WATER_KEY);
++  const f = localStorage.getItem(FLOW_KEY);
+@@ -72,6 +80,8 @@
+   history = h ? JSON.parse(h) : [];
+   streak  = s ? parseInt(s, 10) : 0;
+   growth  = g ? parseInt(g, 10) : 0;
++  waterIntake = w ? JSON.parse(w) : {};
++  flowLog = f ? JSON.parse(f) : {};
+ 
+   if (!t) save();
+ }
+@@ -170,6 +180,76 @@
+   showToast('🌱 New task added.');
+ }
++
++function getTodayWater() {
++  return waterIntake[todayStr()] || 0;
++}
++
++function setTodayWater(amount) {
++  const today = todayStr();
++  waterIntake[today] = Math.max(0, Math.min(24, amount));
++  save();
++  renderWellness();
++  renderHomeMood();
++  renderDesert();
++}
++
++function setTodayFlow(level) {
++  const today = todayStr();
++  flowLog[today] = level;
++  save();
++  renderWellness();
++  renderHomeMood();
++  renderDesert();
++}
++
++function getTodayFlow() {
++  return flowLog[todayStr()] || 'none';
++}
++
++function renderWellness() {
++  const waterCount = document.getElementById('water-count');
++  const flowSelect = document.getElementById('flow-input');
++  const flowText = document.getElementById('flow-today');
++  if (!waterCount || !flowSelect || !flowText) return;
++
++  const water = getTodayWater();
++  const flow = getTodayFlow();
++  const label = {
++    none: 'No flow',
++    light: 'Light flow',
++    medium: 'Medium flow',
++    heavy: 'Heavy flow'
++  };
++
++  waterCount.textContent = water;
++  flowSelect.value = flow;
++  flowText.textContent = label[flow] || 'No flow';
++}
++
++function renderHomeMood() {
++  const sub = document.getElementById('home-subtext');
++  if (!sub) return;
++
++  const water = getTodayWater();
++  const flow = getTodayFlow();
++  const done = doneTasks().length;
++  const total = tasks.length;
++
++  if (done > 0 && total > 0 && done === total) {
++    sub.textContent = 'Everything is checked off. The desert looks alive today.';
++    return;
++  }
++
++  if (water >= 8 && flow === 'heavy') {
++    sub.textContent = 'You are pushing through a heavy day and still taking care of yourself.';
++    return;
++  }
++
++  if (water >= 8) {
++    sub.textContent = 'Hydration is solid today. Your cactus looks a little happier.';
++    return;
++  }
++
++  if (flow === 'heavy') {
++    sub.textContent = 'Heavy day. Keep the list short and give yourself some room.';
++    return;
++  }
++
++  sub.textContent = 'Small check-ins still count. Keep going.';
++}
+@@ -226,10 +306,14 @@
+ function renderAll() {
+   renderHome();
+   renderTasks();
+   renderHistory();
+   renderDesert();
+   renderStreak();
++  renderWellness();
++  renderHomeMood();
+ }
+@@ -236,6 +320,10 @@
+ function renderHome() {
+   const h = new Date().getHours();
+   const greet = h < 12 ? 'Good morning.' : h < 17 ? 'Good afternoon.' : 'Good evening.';
+   document.getElementById('greeting-text').textContent = greet;
+ 
++  const canvas = document.getElementById('main-cactus');
++  if (canvas) {
++    canvas.classList.toggle('cactus-glow', getTodayWater() >= 8 || getTodayFlow() === 'light');
++  }
++
+   const list = document.getElementById('home-task-list');
+   list.innerHTML = '';
+   const show = [...pendingTasks(), ...snoozedTasks()].slice(0, 4);
+@@ -520,12 +608,30 @@
+ function dailyReset() {
+   const today = todayStr();
+   const lastReset = localStorage.getItem('desertbloom_lastreset');
+   if (lastReset === today) return;
+@@ -531,6 +637,14 @@
+   });
+   localStorage.setItem('desertbloom_lastreset', today);
++
++  const cutoff = new Date(today + 'T00:00:00');
++  cutoff.setDate(cutoff.getDate() - 90);
++  const prune = obj => Object.fromEntries(
++    Object.entries(obj).filter(([d]) => new Date(d + 'T00:00:00') >= cutoff)
++  );
++  waterIntake = prune(waterIntake);
++  flowLog = prune(flowLog);
++
+   save();
+ }
+@@ -548,6 +662,18 @@
+   document.getElementById('home-task-list').addEventListener('click', handleTaskAction);
+   document.getElementById('all-task-list').addEventListener('click', handleTaskAction);
++
++  document.getElementById('water-plus-btn')?.addEventListener('click', () => {
++    setTodayWater(getTodayWater() + 1);
++    showToast('💧 Water logged.');
++  });
++
++  document.getElementById('water-minus-btn')?.addEventListener('click', () => {
++    setTodayWater(getTodayWater() - 1);
++    showToast('💧 Water updated.');
++  });
++
++  document.getElementById('flow-input')?.addEventListener('change', e => {
++    setTodayFlow(e.target.value);
++    showToast('📝 Cycle updated.');
++  });
+ }
+ 
+ document.addEventListener('DOMContentLoaded', init);
